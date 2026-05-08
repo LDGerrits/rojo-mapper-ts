@@ -4,13 +4,28 @@
 </div>
 
 ## Why use it?
-While folder-by-type (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. Folder-by-feature (i.e. grouping all related files together) is superior for scaling, maintainability, and team collaboration. It makes it easier to add, modify, or delete features.
+While **folder-by-type** (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. 
 
-## Features
-* **Automatic Folder Routing:** Folders named 'server', 'client', 'shared', or specific Roblox services (e.g. 'replicatedfirst') automatically map to their respective Roblox services.
-* **Suffix Teleportation:** Use '-server.ts', '-client.ts', or service suffixes (e.g., '-startergui.ts') to send files to specific services regardless of their physical folder location.  
+**Folder-by-feature** (i.e. grouping all related files together) is superior for scaling, maintainability, and team collaboration. It makes it easier to add, modify, or delete features.
 
-## Example structure
+## Automatic Routing
+The router determines a file's destination using three main strategies. Folder-based routing takes precedence over suffix-based routing.
+
+### 1. Folder-Based Routing (Primary)
+If a file is located within a folder named after a service or a keyword, it is automatically routed to that service.
+* **Keywords:** `server`, `client`, `shared`
+* **Services:** `ReplicatedFirst`, `ServerStorage`, `StarterGui`, etc.
+* **Behavior:** All files and sub-folders within these directories inherit the target service.
+
+### 2. Smart Suffix Routing (Secondary)
+If a file is in a folder that doesn't match a keyword or service name, the router looks at the filename's suffix. This supports both delimited and PascalCase styles.
+
+**Note:** The router is smart enough to strip the suffix for the final Rojo object name. `AuthServer.ts` becomes `Auth` in Roblox. This can be turned off by doing `APPEND_ROUTE_SUFFIX = false`.
+
+### 3. Smart Suffix Routing (Fallback)
+If neither matches, the file defaults to `ReplicatedStorage`.
+
+## Example Structure
 ```txt
 src/
 ├── app/
@@ -32,12 +47,12 @@ src/
 ```
 
 ## Setup & Integration
-To get the most out of rbxts-feature-router, you should integrate it directly into your npm workflow so the `default.project.json` updates automatically as you code.
+Integrate the router into your workflow to ensure your `default.project.json` stays synchronized with your file system.
 
 ### 1. Install Dependencies
 Copy the `feature-router.ts` script into your project (e.g. in the `tools/` directory).
 
-Also, you will need a few development tools to handle the mapping, watching, and concurrent execution:
+Also, you will need a few development tools to handle the watching, routing and concurrent execution:
 ```bash
 npm install -D tsx chokidar-cli concurrently
 ```
@@ -55,4 +70,4 @@ Add the following scripts to your package.json to automate the build process:
 ### 3. Command Overview
 * **npm run build:** Generates the latest project map and performs a single roblox-ts compilation.  
 * **npm run watch:** Monitors your src directory. If you add or move a folder, the mapper instantly updates your Rojo project while rbxtsc handles the code compilation.  
-* **npm run dev:** The dev command. It maps, compiles, starts all watchers, and launches the Rojo server in one go.
+* **npm run dev:** The dev command. It builds, compiles, starts all watchers, and launches the Rojo server in one go.
