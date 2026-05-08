@@ -11,18 +11,23 @@ While **folder-by-type** (i.e. putting all components in one folder, all service
 ## Automatic Routing
 The router determines a file's destination using three main strategies. Folder-based routing takes precedence over suffix-based routing.
 
-### 1. Folder-Based Routing (Primary)
+### 1. Folder Context (Primary)
 If a file is located within a folder named after a service or a keyword, it is automatically routed to that service.
 * **Keywords:** `server`, `client`, `shared`
 * **Services:** `ReplicatedFirst`, `ServerStorage`, `StarterGui`, etc.
 * **Behavior:** All files and sub-folders within these directories inherit the target service.
 
-### 2. Smart Suffix Routing (Secondary)
-If a file is in a folder that doesn't match a keyword or service name, the router looks at the filename's suffix. This supports both delimited and PascalCase styles.
+### 2. Suffix Context (Secondary)
+If a file is in a generic folder, the router inspects the filename for a suffix. This allows you to define a file's destination without moving it into a specific sub-folder.
+* **Delimited Suffixes:** Use a separator such as a dot, hyphen, or underscore.
+    - Examples: `auth.server.ts`, `input-client.ts`, `data_shared.ts`
 
-**Note:** The router is smart enough to strip the suffix for the final Rojo object name. `AuthServer.ts` becomes `Auth` in Roblox. This can be turned off by doing `APPEND_ROUTE_SUFFIX = false`.
+* **PascalCase Suffixes:** Append the service name directly to the end of the filename.
+    - Examples: `AuthServer.ts`, `InputClient.ts`, `DataShared.ts`
 
-### 3. Smart Suffix Routing (Fallback)
+    **Note:** The router strips the suffix for the final Rojo object name. `AuthServer.ts` becomes `Auth` in Roblox. This can be stopped by doing `APPEND_ROUTE_SUFFIX = true` instead.
+
+### 3. Default
 If neither matches, the file defaults to `ReplicatedStorage`.
 
 ## Example Structure
@@ -67,7 +72,7 @@ Add the following scripts to your package.json to automate the build process:
 }
 ```
 
-### 3. Command Overview
+### 3. Commands
 * **npm run build:** Generates the latest project map and performs a single roblox-ts compilation.  
 * **npm run watch:** Monitors your src directory. If you add or move a folder, the mapper instantly updates your Rojo project while rbxtsc handles the code compilation.  
-* **npm run dev:** The dev command. It builds, compiles, starts all watchers, and launches the Rojo server in one go.
+* **npm run dev:** The dev command. It builds, compiles, starts all watchers, and launches the Rojo server all in one go.
