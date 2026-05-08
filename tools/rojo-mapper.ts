@@ -93,8 +93,11 @@ function processFilePath(filepath: string, isInit: boolean) {
     if (suffixMatch) {
         const suffix = suffixMatch[1];
         if (SERVICE_MAP[suffix]) {
-            targetService = SERVICE_MAP[suffix];
             foundSuffix = suffix;
+            // Only override the targetService if a parent folder hasn't already routed it.
+            if (!lastRouteKeyword) {
+                targetService = SERVICE_MAP[suffix];
+            }
         }
     }
 
@@ -111,7 +114,7 @@ function processFilePath(filepath: string, isInit: boolean) {
                 nodeName += `-${lastRouteKeyword}`; 
             }
         } else {
-            nodeName = lastRouteKeyword ? toPascalCase(lastRouteKeyword) : "Source";
+            nodeName = lastRouteKeyword ? lastRouteKeyword : "source";
         }
     } else {
         // Standard mapping
@@ -131,6 +134,13 @@ function processFilePath(filepath: string, isInit: boolean) {
 function walk(dir: string, callback: (filepath: string, isInit: boolean) => void) {
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    const initFile = entries.find(e => e.isFile() && isInitFile(e.name));
+    if (initFile) {
+        const fullPath = path.join(dir, initFile.name);
+        callback(fullPath, true);
+        return;
+    }
     
     for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
