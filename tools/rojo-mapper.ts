@@ -5,7 +5,7 @@ const BASE_PATH = path.join(__dirname, "../src");
 const OUT_DIR_NAME = "out";
 const PROJECT_NAME = "roblox-ts-game";
 const APPEND_ROUTE_SUFFIX = false;
-const WRAP_IN_TS_FOLDER = true; 
+const WRAP_IN_TS_FOLDER = true;
 
 const SERVICE_MAP: Record<string, string> = {
     server: "ServerScriptService",
@@ -30,8 +30,8 @@ const toPosix = (p: string) => p.split(path.sep).join("/");
 const toPascalCase = (str: string) =>
     str.toLowerCase() === "ui" ? "UI" : str.charAt(0).toUpperCase() + str.slice(1);
 
-const isInitFile = (filename: string) => /^(init|index)(\.(server|client))?\.(luau|lua|tsx?)$/i.test(filename);
-const isScriptFile = (filename: string) => /\.(luau|lua|tsx?)$/i.test(filename);
+const isInitFile = (filename: string) => /^(init|index)(\.(server|client))?\.(tsx?|luau|lua)$/i.test(filename);
+const isScriptFile = (filename: string) => /\.(tsx?|luau|lua)$/i.test(filename);
 
 function processFilePath(filepath: string, isInit: boolean) {
     const relativePath = path.relative(BASE_PATH, filepath);
@@ -64,11 +64,12 @@ function processFilePath(filepath: string, isInit: boolean) {
     }
 
     let nodeName = basename;
-    const compiledRelativePath = relativePath.replace(/\.tsx?$/i, ".luau");
-    let projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
+    let projectPath = "";
 
     if (isInit) {
-        projectPath = toPosix(path.dirname(projectPath));
+        const folderRelativePath = path.dirname(relativePath);
+        projectPath = toPosix(path.join(OUT_DIR_NAME, folderRelativePath));
+
         if (virtualParts.length > 0) {
             nodeName = virtualParts.pop()!;
             if (APPEND_ROUTE_SUFFIX && lastRouteKeyword) {
@@ -79,6 +80,10 @@ function processFilePath(filepath: string, isInit: boolean) {
             nodeName = lastRouteKeyword ? toPascalCase(lastRouteKeyword) : "Source";
         }
     } else {
+        const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
+        const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
+        projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
+
         if (!APPEND_ROUTE_SUFFIX) {
             nodeName = basename.replace(/[\.-]?(server|client)$/i, "");
         }
@@ -92,27 +97,15 @@ const projectTree: any = {
     globIgnorePaths: [ "**/package.json", "**/tsconfig.json" ],
     tree: {
         $className: "DataModel",
-        Workspace: {
-            $className: "Workspace",
-            "$properties": { "FilteringEnabled": true }
-        },
-        HttpService: {
-            $className: "HttpService",
-            "$properties": { "HttpEnabled": true }
-        },
-        SoundService: {
-            $className: "SoundService",
-            "$properties": { "RespectFilteringEnabled": true }
-        },
+        Workspace: { $className: "Workspace", "$properties": { "FilteringEnabled": true } },
+        HttpService: { $className: "HttpService", "$properties": { "HttpEnabled": true } },
+        SoundService: { $className: "SoundService", "$properties": { "RespectFilteringEnabled": true } },
         ReplicatedStorage: { 
             $className: "ReplicatedStorage", 
             $ignoreUnknownInstances: true,
             rbxts_include: {
                 $path: "include",
-                node_modules: {
-                    $className: "Folder",
-                    "@rbxts": { $path: "node_modules/@rbxts" }
-                }
+                node_modules: { $className: "Folder", "@rbxts": { $path: "node_modules/@rbxts" } }
             }
         },
         ServerScriptService: { $className: "ServerScriptService", $ignoreUnknownInstances: true },
@@ -127,23 +120,20 @@ const projectTree: any = {
 function walk(dir: string, callback: (filepath: string, isInit: boolean) => void) {
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
-    const initFile = entries.find((e) => e.isFile() && isInitFile(e.name));
-
-    if (initFile) {
-        callback(path.join(dir, initFile.name), true);
-        return;
-    }
+    
     for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(fullPath, callback);
-        else if (entry.isFile() && isScriptFile(entry.name)) callback(fullPath, false);
+        if (entry.isDirectory()) {
+            walk(fullPath, callback);
+        } else if (entry.isFile() && isScriptFile(entry.name)) {
+            callback(fullPath, isInitFile(entry.name));
+        }
     }
 }
 
-walk(BASE_PATH, (filepath: string, isInit: boolean) => {
+walk(BASE_PATH, (filepath, isInit) => {
     const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
-
-    let current: any = projectTree.tree;
+    let current = projectTree.tree;
     const parentService = SERVICE_PARENTS[targetService];
 
     if (parentService) {
