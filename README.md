@@ -1,10 +1,10 @@
 <div align="center">
-	<h1>rojo-mapper-ts</h1>
+	<h1>rbxts-feature-router</h1>
     <p>A feature-based structure generator for roblox-ts. Automatically route server, client, and shared logic from feature-local folders to their designated Roblox services.</p>
 </div>
 
 # Why use it?
-While folder-by-type (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. Feature-based structures (i.e. grouping all related files together) is generally superior for scaling, maintainability, and team collaboration; it makes it easier to add, modify, or delete features.
+While folder-by-type (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. Folder-by-feature (i.e. grouping all related files together) is generally superior for scaling, maintainability, and team collaboration; it makes it easier to add, modify, or delete features.
 
 # Features
 * **Automatic Folder Routing:** Folders named 'server', 'client', 'shared', or specific Roblox services (e.g. 'replicatedfirst') automatically map to their respective Roblox services.
@@ -32,27 +32,27 @@ src/
 ```
 
 ## Setup & Integration
-To get the most out of rojo-mapper-ts, you should integrate it directly into your npm workflow so the `default.project.json` updates automatically as you code.
+To get the most out of rbxts-feature-router, you should integrate it directly into your npm workflow so the `default.project.json` updates automatically as you code.
 
-1. Install Dependencies
-Copy the `rojo-mapper.ts` script into your project (e.g. in the `tools/` directory).
+### 1. Install Dependencies
+Copy the `feature-router.ts` script into your project (e.g. in the `tools/` directory).
 
 Also, you will need a few development tools to handle the mapping, watching, and concurrent execution:
 ```bash
 npm install -D tsx chokidar-cli concurrently
 ```
 
-2. Update package.json Scripts
+### 2. Update package.json Scripts
 Add the following scripts to your package.json to automate the build process:
 ```bash
 "scripts": {
-    "build": "tsx tools/rojo-mapper.ts && rbxtsc",
-    "watch": "concurrently \"chokidar src -c \\\"tsx tools/rojo-mapper.ts\\\"\" \"rbxtsc -w\"",
-    "dev": "npm run build && concurrently \"chokidar src -c \\\"tsx tools/rojo-mapper.ts\\\"\" \"rbxtsc -w\" \"rojo serve\""
+    "build": "tsx tools/feature-router.ts && rbxtsc",
+    "watch": "concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\"",
+    "dev": "npm run build && concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\" \"rojo serve\""
 }
 ```
 
-3. Command Overview
+### 3. Command Overview
 * **npm run build:** Generates the latest project map and performs a single roblox-ts compilation.  
 * **npm run watch:** Monitors your src directory. If you add or move a folder, the mapper instantly updates your Rojo project while rbxtsc handles the code compilation.  
 * **npm run dev:** The dev command. It maps, compiles, starts all watchers, and launches the Rojo server in one go.
