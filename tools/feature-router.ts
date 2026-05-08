@@ -8,9 +8,9 @@ const APPEND_ROUTE_SUFFIX = false;
 const WRAP_IN_TS_FOLDER = true;
 
 /**
- * Directory keywords or file suffixes to Roblox services.
+ * Folder routing (case-insensitive)
  */
-const SERVICE_MAP: Record<string, string> = {
+const FOLDER_MAP: Record<string, string> = {
     server: "ServerScriptService",
     client: "StarterPlayerScripts",
     shared: "ReplicatedStorage",
@@ -25,12 +25,38 @@ const SERVICE_MAP: Record<string, string> = {
 };
 
 /**
- * Parent-child relationships for specific services.
+ * PascalCase matching at the end of file names (case-sensitive)
+ */
+const EXACT_SUFFIX_MAP: Record<string, string> = {
+    Server: "ServerScriptService",
+    Client: "StarterPlayerScripts",
+    Shared: "ReplicatedStorage",
+    ServerScriptService: "ServerScriptService",
+    ReplicatedStorage: "ReplicatedStorage",
+    ReplicatedFirst: "ReplicatedFirst",
+    ServerStorage: "ServerStorage",
+    StarterGui: "StarterGui",
+    StarterPack: "StarterPack",
+    StarterPlayerScripts: "StarterPlayerScripts",
+    StarterCharacterScripts: "StarterCharacterScripts",
+};
+
+/**
+ * Parent-child relationships for specific services
  */
 const SERVICE_PARENTS: Record<string, string> = {
     StarterPlayerScripts: "StarterPlayer",
     StarterCharacterScripts: "StarterPlayer",
 };
+
+const folderKeys = Object.keys(FOLDER_MAP).join("|");
+const exactKeys = Object.keys(EXACT_SUFFIX_MAP).join("|");
+
+// Matches separators (case-insensitive): -server, .client, _SHARED 
+const SEPARATOR_REGEX = new RegExp(`[\\.\\-_](${folderKeys})$`, "i");
+
+// Matches appended words (case-sensitive): DataServer, AuthClient 
+const PASCAL_REGEX = new RegExp(`(${exactKeys})$`);
 
 const PROJECT_TREE: any = {
     name: PROJECT_NAME,
@@ -58,10 +84,7 @@ const PROJECT_TREE: any = {
 };
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
-const toPascalCase = (str: string) =>
-    str.toLowerCase() === "ui" ? "UI" : str.charAt(0).toUpperCase() + str.slice(1);
-
-const isInitFile = (filename: string) => /^(init|index)([\.-][a-z0-9_]+)?\.(tsx?|luau|lua)$/i.test(filename);
+const isInitFile = (filename: string) => /^(index|init)([\.-][a-z0-9_]+)?\.(tsx?|luau|lua)$/i.test(filename);
 const isScriptFile = (filename: string) => /\.(tsx?|luau|lua)$/i.test(filename);
 
 function processFilePath(filepath: string, isInit: boolean) {
@@ -70,39 +93,50 @@ function processFilePath(filepath: string, isInit: boolean) {
     const filename = parts.pop()!;
     const ext = path.extname(filename);
     const basename = path.basename(filename, ext);
-    const lowerName = basename.toLowerCase();
 
     let targetService = "ReplicatedStorage";
     const virtualParts: string[] = [];
     let lastRouteKeyword: string | null = null;
 
-    // Route based on parent folder names
+    // Folder name routing
     for (const part of parts) {
         const lowerPart = part.toLowerCase();
-        if (SERVICE_MAP[lowerPart]) {
-            targetService = SERVICE_MAP[lowerPart];
+        if (FOLDER_MAP[lowerPart]) {
+            targetService = FOLDER_MAP[lowerPart];
             lastRouteKeyword = lowerPart;
         } else {
             virtualParts.push(part);
         }
     }
 
-    // Override service if file has a specific suffix (.server, -client, etc.)
-    const suffixMatch = lowerName.match(/[\.-]([a-z0-9_]+)$/);
+    // Suffix routing
     let foundSuffix: string | null = null;
-    if (suffixMatch) {
-        const suffix = suffixMatch[1];
-        if (SERVICE_MAP[suffix]) {
-            foundSuffix = suffix;
-            // Only override the targetService if a parent folder hasn't already routed it.
-            if (!lastRouteKeyword) {
-                targetService = SERVICE_MAP[suffix];
-            }
+    let matchedSuffixLength = 0;
+    let mappedService: string | null = null;
+    const sepMatch = basename.match(SEPARATOR_REGEX);
+    if (sepMatch) {
+        // Separator match
+        foundSuffix = sepMatch[1]; 
+        mappedService = FOLDER_MAP[foundSuffix.toLowerCase()];
+        matchedSuffixLength = sepMatch[0].length;
+    } else {
+        // PascalCase
+        const pascalMatch = basename.match(PASCAL_REGEX);
+        if (pascalMatch) {
+            foundSuffix = pascalMatch[1]; 
+            mappedService = EXACT_SUFFIX_MAP[foundSuffix];
+            matchedSuffixLength = pascalMatch[0].length;
         }
+    }
+
+    // Only override the targetService if a parent folder hasn't already routed it
+    if (mappedService && !lastRouteKeyword) {
+        targetService = mappedService;
     }
 
     let nodeName = basename;
     let projectPath = "";
+    
     if (isInit) {
         // Init files represent their parent folder in Rojo
         const folderRelativePath = path.dirname(relativePath);
@@ -122,9 +156,8 @@ function processFilePath(filepath: string, isInit: boolean) {
         const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
         projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
 
-        if (!APPEND_ROUTE_SUFFIX && foundSuffix) {
-            const regex = new RegExp(`[\\.-]?${foundSuffix}$`, "i");
-            nodeName = basename.replace(regex, "");
+        if (!APPEND_ROUTE_SUFFIX && mappedService) {
+            nodeName = basename.slice(0, -matchedSuffixLength);
         }
     }
 
@@ -182,4 +215,4 @@ walk(BASE_PATH, (filepath, isInit) => {
 });
 
 fs.writeFileSync("default.project.json", JSON.stringify(PROJECT_TREE, null, 2));
-console.log("✅ default.project.json generated.");
+console.log("Process complete: default.project.json has been successfully generated.");
