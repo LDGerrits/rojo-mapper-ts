@@ -12,6 +12,7 @@ While folder-by-type (i.e. putting all components in one folder, all services in
 * **Suffix Teleportation:** Use '-server.ts', '-client.ts', or service suffixes (e.g., '-startergui.ts') to send files to specific services regardless of their physical folder location.  
 
 ## Example structure
+```txt
 src/
 ├── app/
 │   ├── client/
@@ -29,6 +30,7 @@ src/
 │   │   │   └── index.ts        -> Mounts to ServerScriptService/TS/features/inventory/init.luau
 │   │   └── shared/
 │   │       └── config.ts       -> Mounts to ReplicatedStorage/TS/features/inventory/config.luau
+```
 
 ## Setup & Integration
 To get the most out of rojo-mapper-ts, you should integrate it directly into your npm workflow so the `default.project.json` updates automatically as you code.
