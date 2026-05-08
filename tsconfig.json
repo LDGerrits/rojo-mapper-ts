@@ -22,7 +22,19 @@
 		"outDir": "out",
 		"baseUrl": "src",
 		"incremental": true,
-		"tsBuildInfoFile": "out/tsconfig.tsbuildinfo"
+		"tsBuildInfoFile": "out/tsconfig.tsbuildinfo",
+		"paths": {
+			"@app/*": ["app/*"],
+			"@client/*": ["components/*"],
+			"@server/*": ["config/*"],
+			"@core/*": ["core*"],
+			"@features/*": ["features*"],
+			"@game/*": ["game*"],
+			"@hooks/*": ["hooks*"],
+			"@providers/*": ["providers*"],
+			"@store/*": ["store*"],
+			"@utils/*": ["utils*"]
+		}
 	},
 	"exclude": [
         "tools"
