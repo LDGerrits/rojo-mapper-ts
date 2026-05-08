@@ -1,0 +1,110 @@
+{
+  "name": "roblox-ts-game",
+  "globIgnorePaths": [
+    "**/package.json",
+    "**/tsconfig.json"
+  ],
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+    "HttpService": {
+      "$className": "HttpService",
+      "$properties": {
+        "HttpEnabled": true
+      }
+    },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "rbxts_include": {
+        "$path": "include",
+        "node_modules": {
+          "$className": "Folder",
+          "@rbxts": {
+            "$path": "node_modules/@rbxts"
+          }
+        }
+      },
+      "TS": {
+        "$className": "Folder",
+        "components": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "test": {
+            "$path": "out/components/test.luau"
+          }
+        },
+        "module": {
+          "$path": "out/shared/module.luau"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "TS": {
+        "$className": "Folder",
+        "features": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "inventory-server": {
+            "$path": "out/features/inventory/server"
+          },
+          "inventory": {
+            "$className": "Folder",
+            "$ignoreUnknownInstances": true,
+            "test-server": {
+              "$path": "out/features/inventory/test-server.luau"
+            }
+          }
+        },
+        "main.server": {
+          "$path": "out/server/main.server.luau"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
+        "TS": {
+          "$className": "Folder",
+          "Client": {
+            "$path": "out/client"
+          },
+          "components": {
+            "$className": "Folder",
+            "$ignoreUnknownInstances": true,
+            "component-client": {
+              "$path": "out/components/component-client.luau"
+            }
+          },
+          "features": {
+            "$className": "Folder",
+            "$ignoreUnknownInstances": true,
+            "inventory": {
+              "$className": "Folder",
+              "$ignoreUnknownInstances": true,
+              "test": {
+                "$path": "out/features/inventory/client/test.luau"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
