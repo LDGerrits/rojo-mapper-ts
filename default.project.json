@@ -41,12 +41,39 @@
         "components": {
           "$className": "Folder",
           "$ignoreUnknownInstances": true,
-          "test": {
-            "$path": "out/components/test.luau"
+          "Button": {
+            "$path": "out/components/Button"
+          },
+          "Header": {
+            "$path": "out/components/Header"
           }
         },
-        "module": {
-          "$path": "out/shared/module.luau"
+        "config": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "fonts": {
+            "$path": "out/config/fonts.luau"
+          }
+        },
+        "features": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "inventory": {
+            "$path": "out/features/inventory/shared"
+          }
+        },
+        "hooks": {
+          "$path": "out/hooks"
+        },
+        "providers": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "root-provider": {
+            "$path": "out/providers/root-provider.luau"
+          }
+        },
+        "store": {
+          "$path": "out/store"
         }
       }
     },
@@ -55,22 +82,15 @@
       "$ignoreUnknownInstances": true,
       "TS": {
         "$className": "Folder",
+        "app": {
+          "$path": "out/app/server"
+        },
         "features": {
           "$className": "Folder",
           "$ignoreUnknownInstances": true,
-          "inventory-server": {
-            "$path": "out/features/inventory/server"
-          },
           "inventory": {
-            "$className": "Folder",
-            "$ignoreUnknownInstances": true,
-            "test-server": {
-              "$path": "out/features/inventory/test-server.luau"
-            }
+            "$path": "out/features/inventory/server"
           }
-        },
-        "main.server": {
-          "$path": "out/server/main.server.luau"
         }
       }
     },
@@ -82,27 +102,26 @@
         "$ignoreUnknownInstances": true,
         "TS": {
           "$className": "Folder",
-          "Client": {
-            "$path": "out/client"
-          },
-          "components": {
-            "$className": "Folder",
-            "$ignoreUnknownInstances": true,
-            "component-client": {
-              "$path": "out/components/component-client.luau"
-            }
+          "app": {
+            "$path": "out/app/client"
           },
           "features": {
             "$className": "Folder",
             "$ignoreUnknownInstances": true,
             "inventory": {
-              "$className": "Folder",
-              "$ignoreUnknownInstances": true,
-              "test": {
-                "$path": "out/features/inventory/client/test.luau"
-              }
+              "$path": "out/features/inventory/client"
             }
           }
+        }
+      }
+    },
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "$ignoreUnknownInstances": true,
+      "TS": {
+        "$className": "Folder",
+        "app": {
+          "$path": "out/app/replicatedfirst"
         }
       }
     }
