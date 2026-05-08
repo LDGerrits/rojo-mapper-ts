@@ -1,10 +1,10 @@
 <div align="center">
 	<h1>rbxts-feature-router</h1>
-    <p>A feature-based structure generator for roblox-ts. Automatically route server, client, and shared logic from feature-local folders to their designated Roblox services.</p>
+    <p>An automatic, file-system based router for roblox-ts. Organize feature logic in a single directory.</p>
 </div>
 
 ## Why use it?
-While folder-by-type (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. Folder-by-feature (i.e. grouping all related files together) is generally superior for scaling, maintainability, and team collaboration; it makes it easier to add, modify, or delete features.
+While folder-by-type (i.e. putting all components in one folder, all services in another) is simple, it becomes difficult to manage as projects grow, requiring you to jump between folders to edit one feature. Folder-by-feature (i.e. grouping all related files together) is superior for scaling, maintainability, and team collaboration. It makes it easier to add, modify, or delete features.
 
 ## Features
 * **Automatic Folder Routing:** Folders named 'server', 'client', 'shared', or specific Roblox services (e.g. 'replicatedfirst') automatically map to their respective Roblox services.
