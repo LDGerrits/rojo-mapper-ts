@@ -5,6 +5,7 @@ const BASE_PATH = path.join(__dirname, "../src");
 const OUT_DIR_NAME = "out";
 const PROJECT_NAME = "roblox-ts-game";
 const APPEND_ROUTE_SUFFIX = false;
+const WRAP_IN_TS_FOLDER = true; 
 
 const SERVICE_MAP: Record<string, string> = {
     server: "ServerScriptService",
@@ -55,9 +56,9 @@ function processFilePath(filepath: string, isInit: boolean) {
     }
 
     if (!isInit) {
-        if (lowerName.endsWith(".server") || lowerName.endsWith("server")) {
+        if (lowerName.match(/[\.-]server$/)) {
             targetService = "ServerScriptService";
-        } else if (lowerName.endsWith(".client") || lowerName.endsWith("client")) {
+        } else if (lowerName.match(/[\.-]client$/)) {
             targetService = "StarterPlayerScripts";
         }
     }
@@ -152,8 +153,11 @@ walk(BASE_PATH, (filepath: string, isInit: boolean) => {
 
     current[targetService] ??= { $className: targetService, $ignoreUnknownInstances: true };
     current = current[targetService];
-    current.TS ??= { $className: "Folder" };
-    current = current.TS;
+    
+    if (WRAP_IN_TS_FOLDER) {
+        current.TS ??= { $className: "Folder" };
+        current = current.TS;
+    }
 
     for (const part of virtualParts) {
         current[part] ??= { $className: "Folder", $ignoreUnknownInstances: true };
