@@ -7,6 +7,9 @@ const PROJECT_NAME = "roblox-ts-game";
 const APPEND_ROUTE_SUFFIX = false;
 const WRAP_IN_TS_FOLDER = true;
 
+/**
+ * Directory keywords or file suffixes to Roblox services.
+ */
 const SERVICE_MAP: Record<string, string> = {
     server: "ServerScriptService",
     client: "StarterPlayerScripts",
@@ -21,78 +24,15 @@ const SERVICE_MAP: Record<string, string> = {
     startercharacterscripts: "StarterCharacterScripts",
 };
 
+/**
+ * Parent-child relationships for specific services.
+ */
 const SERVICE_PARENTS: Record<string, string> = {
     StarterPlayerScripts: "StarterPlayer",
     StarterCharacterScripts: "StarterPlayer",
 };
 
-const toPosix = (p: string) => p.split(path.sep).join("/");
-const toPascalCase = (str: string) =>
-    str.toLowerCase() === "ui" ? "UI" : str.charAt(0).toUpperCase() + str.slice(1);
-
-const isInitFile = (filename: string) => /^(init|index)(\.(server|client))?\.(tsx?|luau|lua)$/i.test(filename);
-const isScriptFile = (filename: string) => /\.(tsx?|luau|lua)$/i.test(filename);
-
-function processFilePath(filepath: string, isInit: boolean) {
-    const relativePath = path.relative(BASE_PATH, filepath);
-    const parts = relativePath.split(path.sep);
-    const filename = parts.pop()!;
-    const ext = path.extname(filename);
-    const basename = path.basename(filename, ext);
-    const lowerName = basename.toLowerCase();
-
-    let targetService = "ReplicatedStorage";
-    const virtualParts: string[] = [];
-    let lastRouteKeyword: string | null = null;
-
-    for (const part of parts) {
-        const lowerPart = part.toLowerCase();
-        if (SERVICE_MAP[lowerPart]) {
-            targetService = SERVICE_MAP[lowerPart];
-            lastRouteKeyword = lowerPart;
-        } else {
-            virtualParts.push(part);
-        }
-    }
-
-    if (!isInit) {
-        if (lowerName.match(/[\.-]server$/)) {
-            targetService = "ServerScriptService";
-        } else if (lowerName.match(/[\.-]client$/)) {
-            targetService = "StarterPlayerScripts";
-        }
-    }
-
-    let nodeName = basename;
-    let projectPath = "";
-
-    if (isInit) {
-        const folderRelativePath = path.dirname(relativePath);
-        projectPath = toPosix(path.join(OUT_DIR_NAME, folderRelativePath));
-
-        if (virtualParts.length > 0) {
-            nodeName = virtualParts.pop()!;
-            if (APPEND_ROUTE_SUFFIX && lastRouteKeyword) {
-                if (lastRouteKeyword === "server") nodeName += "-server";
-                if (lastRouteKeyword === "client") nodeName += "-client";
-            }
-        } else {
-            nodeName = lastRouteKeyword ? toPascalCase(lastRouteKeyword) : "Source";
-        }
-    } else {
-        const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
-        const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
-        projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
-
-        if (!APPEND_ROUTE_SUFFIX) {
-            nodeName = basename.replace(/[\.-]?(server|client)$/i, "");
-        }
-    }
-
-    return { targetService, virtualParts, nodeName, projectPath };
-}
-
-const projectTree: any = {
+const PROJECT_TREE: any = {
     name: PROJECT_NAME,
     globIgnorePaths: [ "**/package.json", "**/tsconfig.json" ],
     tree: {
@@ -117,6 +57,77 @@ const projectTree: any = {
     },
 };
 
+const toPosix = (p: string) => p.split(path.sep).join("/");
+const toPascalCase = (str: string) =>
+    str.toLowerCase() === "ui" ? "UI" : str.charAt(0).toUpperCase() + str.slice(1);
+
+const isInitFile = (filename: string) => /^(init|index)([\.-][a-z0-9_]+)?\.(tsx?|luau|lua)$/i.test(filename);
+const isScriptFile = (filename: string) => /\.(tsx?|luau|lua)$/i.test(filename);
+
+function processFilePath(filepath: string, isInit: boolean) {
+    const relativePath = path.relative(BASE_PATH, filepath);
+    const parts = relativePath.split(path.sep);
+    const filename = parts.pop()!;
+    const ext = path.extname(filename);
+    const basename = path.basename(filename, ext);
+    const lowerName = basename.toLowerCase();
+
+    let targetService = "ReplicatedStorage";
+    const virtualParts: string[] = [];
+    let lastRouteKeyword: string | null = null;
+
+    // Route based on parent folder names
+    for (const part of parts) {
+        const lowerPart = part.toLowerCase();
+        if (SERVICE_MAP[lowerPart]) {
+            targetService = SERVICE_MAP[lowerPart];
+            lastRouteKeyword = lowerPart;
+        } else {
+            virtualParts.push(part);
+        }
+    }
+
+    // Override service if file has a specific suffix (.server, -client, etc.)
+    const suffixMatch = lowerName.match(/[\.-]([a-z0-9_]+)$/);
+    let foundSuffix: string | null = null;
+    if (suffixMatch) {
+        const suffix = suffixMatch[1];
+        if (SERVICE_MAP[suffix]) {
+            targetService = SERVICE_MAP[suffix];
+            foundSuffix = suffix;
+        }
+    }
+
+    let nodeName = basename;
+    let projectPath = "";
+    if (isInit) {
+        // Init files represent their parent folder in Rojo
+        const folderRelativePath = path.dirname(relativePath);
+        projectPath = toPosix(path.join(OUT_DIR_NAME, folderRelativePath));
+
+        if (virtualParts.length > 0) {
+            nodeName = virtualParts.pop()!;
+            if (APPEND_ROUTE_SUFFIX && lastRouteKeyword) {
+                nodeName += `-${lastRouteKeyword}`; 
+            }
+        } else {
+            nodeName = lastRouteKeyword ? toPascalCase(lastRouteKeyword) : "Source";
+        }
+    } else {
+        // Standard mapping
+        const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
+        const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
+        projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
+
+        if (!APPEND_ROUTE_SUFFIX && foundSuffix) {
+            const regex = new RegExp(`[\\.-]?${foundSuffix}$`, "i");
+            nodeName = basename.replace(regex, "");
+        }
+    }
+
+    return { targetService, virtualParts, nodeName, projectPath };
+}
+
 function walk(dir: string, callback: (filepath: string, isInit: boolean) => void) {
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -133,14 +144,16 @@ function walk(dir: string, callback: (filepath: string, isInit: boolean) => void
 
 walk(BASE_PATH, (filepath, isInit) => {
     const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
-    let current = projectTree.tree;
+    let current = PROJECT_TREE.tree;
     const parentService = SERVICE_PARENTS[targetService];
 
+    // Ensure parent services exist
     if (parentService) {
         current[parentService] ??= { $className: parentService, $ignoreUnknownInstances: true };
         current = current[parentService];
     }
 
+    // Mount to the specific service
     current[targetService] ??= { $className: targetService, $ignoreUnknownInstances: true };
     current = current[targetService];
     
@@ -149,6 +162,7 @@ walk(BASE_PATH, (filepath, isInit) => {
         current = current.TS;
     }
 
+    // Build virtual folder hierarchy
     for (const part of virtualParts) {
         current[part] ??= { $className: "Folder", $ignoreUnknownInstances: true };
         current = current[part];
@@ -157,5 +171,5 @@ walk(BASE_PATH, (filepath, isInit) => {
     current[nodeName] = { $path: projectPath };
 });
 
-fs.writeFileSync("default.project.json", JSON.stringify(projectTree, null, 2));
+fs.writeFileSync("default.project.json", JSON.stringify(PROJECT_TREE, null, 2));
 console.log("✅ default.project.json generated.");
