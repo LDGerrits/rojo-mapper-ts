@@ -1,7 +1,6 @@
 <div align="center">
 	<h1>rojo-mapper-ts</h1>
     <p>A feature-based structure generator for roblox-ts. Automatically route server, client, and shared logic from feature-local folders to their designated Roblox services.</p>
-	<a href="https://LDGerrits.github.io/QuickZone/"><strong>View docs</strong></a>
 </div>
 
 # Why use it?
