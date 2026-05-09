@@ -39,7 +39,7 @@ src/
 │   │   └── app.tsx             -> Handled natively by Rojo inside the app module
 │   ├── replicatedfirst/
 │   │   ├── index.client.ts     -> Mounts to ReplicatedFirst/TS/app/init.client.luau
-│   │   └── loader.ts  -> Handled natively by Rojo inside the app module
+│   │   └── loader.ts			-> Handled natively by Rojo inside the app module
 ├── features/
 │   ├── inventory/
 │   │   ├── client/
