@@ -60,6 +60,7 @@ const PASCAL_REGEX = new RegExp(`(${exactKeys})$`);
 
 const PROJECT_TREE: any = {
     name: PROJECT_NAME,
+    emitLegacyScripts: false,
     globIgnorePaths: [ "**/package.json", "**/tsconfig.json" ],
     tree: {
         $className: "DataModel",
