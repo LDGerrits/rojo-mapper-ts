@@ -84,8 +84,11 @@ const PROJECT_TREE: any = {
 };
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
-const isInitFile = (filename: string) => /^(index|init)([\.-][a-z0-9_]+)?\.(tsx?|luau|lua)$/i.test(filename);
-const isScriptFile = (filename: string) => /\.(tsx?|luau|lua)$/i.test(filename);
+const isValidScript = (filename: string) => 
+    /\.(tsx?|luau|lua)$/i.test(filename) && !filename.toLowerCase().endsWith(".d.ts");
+const isInitFile = (filename: string) => 
+    isValidScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
+const isScriptFile = (filename: string) => isValidScript(filename);
 
 function processFilePath(filepath: string, isInit: boolean) {
     const relativePath = path.relative(BASE_PATH, filepath);
@@ -136,7 +139,6 @@ function processFilePath(filepath: string, isInit: boolean) {
 
     let nodeName = basename;
     let projectPath = "";
-    
     if (isInit) {
         // Init files represent their parent folder in Rojo
         const folderRelativePath = path.dirname(relativePath);
@@ -168,20 +170,23 @@ function walk(dir: string, callback: (filepath: string, isInit: boolean) => void
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-    const initFile = entries.find(e => e.isFile() && isInitFile(e.name));
+    const files = entries.filter(e => e.isFile());
+    const folders = entries.filter(e => e.isDirectory());
+
+    const initFile = files.find(e => isInitFile(e.name));
     if (initFile) {
-        const fullPath = path.join(dir, initFile.name);
-        callback(fullPath, true);
+        callback(path.join(dir, initFile.name), true);
         return;
     }
-    
-    for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            walk(fullPath, callback);
-        } else if (entry.isFile() && isScriptFile(entry.name)) {
-            callback(fullPath, isInitFile(entry.name));
+
+    for (const file of files) {
+        if (!initFile && isScriptFile(file.name)) {
+            callback(path.join(dir, file.name), false);
         }
+    }
+
+    for (const folder of folders) {
+        walk(path.join(dir, folder.name), callback);
     }
 }
 
