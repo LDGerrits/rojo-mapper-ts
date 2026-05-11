@@ -56,7 +56,7 @@ Integrate the router into your workflow to ensure your `default.project.json` st
 
 ### 1. Install Dependencies
 Copy the `feature-router.ts` script into your project (e.g. in the `tools/` directory).
-
+Modify settings at the top of the script to your need
 Also, you will need a few development tools to handle the watching, routing and concurrent execution:
 ```bash
 npm install -D tsx chokidar-cli concurrently
