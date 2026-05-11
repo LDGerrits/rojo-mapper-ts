@@ -1,33 +1,68 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const BASE_PATH = path.join(__dirname, "../src");
-const OUT_DIR_NAME = "out";
-const PROJECT_NAME = "roblox-ts-game";
-const APPEND_ROUTE_SUFFIX = false;
-const WRAP_IN_TS_FOLDER = true;
+const CONFIG = {
+    projectName: "roblox-ts-game",
+    projectFile: "default.project.json",
+    srcPath: path.join(__dirname, "../src"),
+    outDir: "out",
 
-/**
- * Folder routing (case-insensitive)
- */
-const FOLDER_MAP: Record<string, string> = {
-    server: "ServerScriptService",
-    client: "StarterPlayerScripts",
-    shared: "ReplicatedStorage",
-    serverscriptservice: "ServerScriptService",
-    replicatedstorage: "ReplicatedStorage",
-    replicatedfirst: "ReplicatedFirst",
-    serverstorage: "ServerStorage",
-    startergui: "StarterGui",
-    starterpack: "StarterPack",
-    starterplayerscripts: "StarterPlayerScripts",
-    startercharacterscripts: "StarterCharacterScripts",
+    // Name of wrapper folder (e.g. "TS") or 'false' to disable nesting
+    wrapInFolder: "TS" as string | false,
+
+    // 'true' keeps/adds suffixes (inventory-server); 'false' strips them (inventory)
+    appendSuffix: false,
 };
 
-/**
- * PascalCase matching at the end of file names (case-sensitive)
- */
-const EXACT_SUFFIX_MAP: Record<string, string> = {
+const PROJECT_TREE: RojoProject = {
+    name: CONFIG.projectName,
+    globIgnorePaths: [ 
+        "**/package.json", 
+        "**/tsconfig.json" 
+    ],
+    tree: {
+        $className: "DataModel",
+        ServerScriptService: {
+            $className: "ServerScriptService",
+        },
+        ReplicatedStorage: { 
+            $className: "ReplicatedStorage", 
+            rbxts_include: {
+                $path: "include",
+                node_modules: { 
+                    $className: "Folder", 
+                    "@rbxts": { $path: "node_modules/@rbxts" } 
+                },
+            },
+        },
+        StarterPlayer: {
+            $className: "StarterPlayer",
+            StarterPlayerScripts: { 
+                $className: "StarterPlayerScripts", 
+            },
+        },
+        Workspace: {
+            $className: "Workspace", 
+            "$properties": { 
+                "FilteringEnabled": true 
+            }
+        },
+        HttpService: { 
+            $className: "HttpService", 
+            "$properties": { 
+                "HttpEnabled": true 
+            }
+        },
+        SoundService: { 
+            $className: "SoundService", 
+            "$properties": { 
+                "RespectFilteringEnabled": true 
+            }
+        },
+    },
+};
+
+const serviceMap: Record<string, string> = {
     Server: "ServerScriptService",
     Client: "StarterPlayerScripts",
     Shared: "ReplicatedStorage",
@@ -39,50 +74,19 @@ const EXACT_SUFFIX_MAP: Record<string, string> = {
     StarterPack: "StarterPack",
     StarterPlayerScripts: "StarterPlayerScripts",
     StarterCharacterScripts: "StarterCharacterScripts",
-};
+} as const;
 
-/**
- * Parent-child relationships for specific services
- */
-const SERVICE_PARENTS: Record<string, string> = {
+const serviceParents: Record<string, string> = {
     StarterPlayerScripts: "StarterPlayer",
     StarterCharacterScripts: "StarterPlayer",
-};
+} as const;
 
-const folderKeys = Object.keys(FOLDER_MAP).join("|");
-const exactKeys = Object.keys(EXACT_SUFFIX_MAP).join("|");
+const lowerServiceMap = Object.fromEntries(
+    Object.entries(serviceMap).map(([k, v]) => [k.toLowerCase(), v])
+);
 
-// Matches separators (case-insensitive): -server, .client, _SHARED 
-const SEPARATOR_REGEX = new RegExp(`[\\.\\-_](${folderKeys})$`, "i");
-
-// Matches appended words (case-sensitive): DataServer, AuthClient 
-const PASCAL_REGEX = new RegExp(`(${exactKeys})$`);
-
-const PROJECT_TREE: any = {
-    name: PROJECT_NAME,
-    emitLegacyScripts: false,
-    globIgnorePaths: [ "**/package.json", "**/tsconfig.json" ],
-    tree: {
-        $className: "DataModel",
-        Workspace: { $className: "Workspace", "$properties": { "FilteringEnabled": true } },
-        HttpService: { $className: "HttpService", "$properties": { "HttpEnabled": true } },
-        SoundService: { $className: "SoundService", "$properties": { "RespectFilteringEnabled": true } },
-        ReplicatedStorage: { 
-            $className: "ReplicatedStorage", 
-            $ignoreUnknownInstances: true,
-            rbxts_include: {
-                $path: "include",
-                node_modules: { $className: "Folder", "@rbxts": { $path: "node_modules/@rbxts" } }
-            }
-        },
-        ServerScriptService: { $className: "ServerScriptService", $ignoreUnknownInstances: true },
-        StarterPlayer: {
-            $className: "StarterPlayer",
-            $ignoreUnknownInstances: true,
-            StarterPlayerScripts: { $className: "StarterPlayerScripts", $ignoreUnknownInstances: true },
-        },
-    },
-};
+const separatorRegex = new RegExp(`[\\.\\-_](${Object.keys(lowerServiceMap).join("|")})$`, "i");
+const pascalCaseRegex = new RegExp(`(${Object.keys(serviceMap).join("|")})$`);
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
 const isValidScript = (filename: string) => 
@@ -91,75 +95,78 @@ const isInitFile = (filename: string) =>
     isValidScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
 const isScriptFile = (filename: string) => isValidScript(filename);
 
+function getOrCreateNode(parent: RojoNode, key: string, className: string): RojoNode {
+    return (parent[key] ??= { $className: className }) as RojoNode;
+}
+
+function sortObject(obj: any): any {
+    if (obj === null || typeof obj !== "object" || Array.isArray(obj)) return obj;
+    return Object.keys(obj)
+        .sort()
+        .reduce((acc: any, key) => {
+            acc[key] = sortObject(obj[key]);
+            return acc;
+        }, {});
+}
+
 function processFilePath(filepath: string, isInit: boolean) {
-    const relativePath = path.relative(BASE_PATH, filepath);
+    const relativePath = path.relative(CONFIG.srcPath, filepath);
     const parts = relativePath.split(path.sep);
     const filename = parts.pop()!;
-    const ext = path.extname(filename);
-    const basename = path.basename(filename, ext);
+    const basename = path.basename(filename, path.extname(filename));
 
     let targetService = "ReplicatedStorage";
     const virtualParts: string[] = [];
     let lastRouteKeyword: string | null = null;
 
-    // Folder name routing
+    // Folder routing
     for (const part of parts) {
         const lowerPart = part.toLowerCase();
-        if (FOLDER_MAP[lowerPart]) {
-            targetService = FOLDER_MAP[lowerPart];
+        if (lowerServiceMap[lowerPart]) {
+            targetService = lowerServiceMap[lowerPart];
             lastRouteKeyword = lowerPart;
         } else {
             virtualParts.push(part);
         }
     }
 
-    // Suffix routing
-    let foundSuffix: string | null = null;
     let matchedSuffixLength = 0;
     let mappedService: string | null = null;
-    const sepMatch = basename.match(SEPARATOR_REGEX);
-    if (sepMatch) {
-        // Separator match
-        foundSuffix = sepMatch[1]; 
-        mappedService = FOLDER_MAP[foundSuffix.toLowerCase()];
-        matchedSuffixLength = sepMatch[0].length;
-    } else {
-        // PascalCase
-        const pascalMatch = basename.match(PASCAL_REGEX);
-        if (pascalMatch) {
-            foundSuffix = pascalMatch[1]; 
-            mappedService = EXACT_SUFFIX_MAP[foundSuffix];
-            matchedSuffixLength = pascalMatch[0].length;
-        }
-    }
 
-    // Only override the targetService if a parent folder hasn't already routed it
+    const sepMatch = basename.match(separatorRegex);
+    const pascalMatch = basename.match(pascalCaseRegex);
+
+    // Suffix routing
+    if (sepMatch) {
+        mappedService = lowerServiceMap[sepMatch[1].toLowerCase()];
+        matchedSuffixLength = sepMatch[0].length;
+    } else if (pascalMatch) {
+        mappedService = serviceMap[pascalMatch[1]];
+        matchedSuffixLength = pascalMatch[0].length;
+    }
     if (mappedService && !lastRouteKeyword) {
         targetService = mappedService;
     }
 
     let nodeName = basename;
     let projectPath = "";
-    if (isInit) {
-        // Init files represent their parent folder in Rojo
-        const folderRelativePath = path.dirname(relativePath);
-        projectPath = toPosix(path.join(OUT_DIR_NAME, folderRelativePath));
 
+    if (isInit) {
+        const folderRelativePath = path.dirname(relativePath);
+        projectPath = toPosix(path.join(CONFIG.outDir, folderRelativePath));
         if (virtualParts.length > 0) {
             nodeName = virtualParts.pop()!;
-            if (APPEND_ROUTE_SUFFIX && lastRouteKeyword) {
+            if (CONFIG.appendSuffix && lastRouteKeyword) {
                 nodeName += `-${lastRouteKeyword}`; 
             }
         } else {
             nodeName = lastRouteKeyword ? lastRouteKeyword : "source";
         }
     } else {
-        // Standard mapping
         const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
         const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
-        projectPath = toPosix(path.join(OUT_DIR_NAME, compiledRelativePath));
-
-        if (!APPEND_ROUTE_SUFFIX && mappedService) {
+        projectPath = toPosix(path.join(CONFIG.outDir, compiledRelativePath));
+        if (!CONFIG.appendSuffix && mappedService) {
             nodeName = basename.slice(0, -matchedSuffixLength);
         }
     }
@@ -170,7 +177,6 @@ function processFilePath(filepath: string, isInit: boolean) {
 function walk(dir: string, callback: (filepath: string, isInit: boolean) => void) {
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
-
     const files = entries.filter(e => e.isFile());
     const folders = entries.filter(e => e.isDirectory());
 
@@ -191,34 +197,60 @@ function walk(dir: string, callback: (filepath: string, isInit: boolean) => void
     }
 }
 
-walk(BASE_PATH, (filepath, isInit) => {
+if (!fs.existsSync(CONFIG.srcPath)) {
+    console.error(`Error: src path not found: ${CONFIG.srcPath}`);
+    process.exit(1);
+}
+
+let fileCount = 0;
+walk(CONFIG.srcPath, (filepath, isInit) => {
+    fileCount++;
     const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
-    let current = PROJECT_TREE.tree;
-    const parentService = SERVICE_PARENTS[targetService];
+    let current: RojoNode = PROJECT_TREE.tree;
 
-    // Ensure parent services exist
+    // Mount to Service
+    const parentService = serviceParents[targetService];
     if (parentService) {
-        current[parentService] ??= { $className: parentService, $ignoreUnknownInstances: true };
-        current = current[parentService];
+        current = getOrCreateNode(current, parentService, parentService);
+    }
+    current = getOrCreateNode(current, targetService, targetService);
+
+    // Mount to TS folder
+    if (CONFIG.wrapInFolder) {
+        current = getOrCreateNode(current, CONFIG.wrapInFolder, "Folder");
     }
 
-    // Mount to the specific service
-    current[targetService] ??= { $className: targetService, $ignoreUnknownInstances: true };
-    current = current[targetService];
-    
-    if (WRAP_IN_TS_FOLDER) {
-        current.TS ??= { $className: "Folder" };
-        current = current.TS;
-    }
-
-    // Build virtual folder hierarchy
+    // Build virtual folders
     for (const part of virtualParts) {
-        current[part] ??= { $className: "Folder", $ignoreUnknownInstances: true };
-        current = current[part];
+        current = getOrCreateNode(current, part, "Folder");
     }
 
     current[nodeName] = { $path: projectPath };
 });
 
-fs.writeFileSync("default.project.json", JSON.stringify(PROJECT_TREE, null, 2));
-console.log("Process complete: default.project.json has been successfully generated.");
+const sortedTree = sortObject(PROJECT_TREE)
+fs.writeFileSync(CONFIG.projectFile, JSON.stringify(sortedTree, null, 2));
+
+console.log(`\nRojo project ${CONFIG.projectName} generated successfully!`);
+console.log(`Processed ${fileCount} source files.`);
+console.log(`Output: ${CONFIG.projectFile}\n`);
+
+interface RojoNode {
+    $className?: string;
+    $path?: string;
+    $ignoreUnknownInstances?: boolean;
+    $properties?: Record<string, unknown>;
+    [key: string]: any;
+}
+
+interface RojoProject {
+    name: string;
+    servePort?: number;
+    servePlaceIds?: number[];
+    placeId?: number;
+    gameId?: number;
+    serveAddress?: string;
+    globIgnorePaths?: string[];
+    emitLegacyScripts?: boolean;
+    tree: RojoNode;
+}

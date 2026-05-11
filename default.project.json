@@ -1,47 +1,32 @@
 {
-  "name": "roblox-ts-game",
-  "emitLegacyScripts": false,
   "globIgnorePaths": [
     "**/package.json",
     "**/tsconfig.json"
   ],
+  "name": "roblox-ts-game",
   "tree": {
     "$className": "DataModel",
-    "Workspace": {
-      "$className": "Workspace",
-      "$properties": {
-        "FilteringEnabled": true
-      }
-    },
     "HttpService": {
       "$className": "HttpService",
       "$properties": {
         "HttpEnabled": true
       }
     },
-    "SoundService": {
-      "$className": "SoundService",
-      "$properties": {
-        "RespectFilteringEnabled": true
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "TS": {
+        "$className": "Folder",
+        "app": {
+          "$path": "out/app/replicatedfirst"
+        }
       }
     },
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
-      "$ignoreUnknownInstances": true,
-      "rbxts_include": {
-        "$path": "include",
-        "node_modules": {
-          "$className": "Folder",
-          "@rbxts": {
-            "$path": "node_modules/@rbxts"
-          }
-        }
-      },
       "TS": {
         "$className": "Folder",
         "components": {
           "$className": "Folder",
-          "$ignoreUnknownInstances": true,
           "Button": {
             "$path": "out/components/Button"
           },
@@ -51,14 +36,12 @@
         },
         "config": {
           "$className": "Folder",
-          "$ignoreUnknownInstances": true,
           "fonts": {
             "$path": "out/config/fonts.luau"
           }
         },
         "features": {
           "$className": "Folder",
-          "$ignoreUnknownInstances": true,
           "inventory": {
             "$path": "out/features/inventory/shared"
           }
@@ -68,7 +51,6 @@
         },
         "providers": {
           "$className": "Folder",
-          "$ignoreUnknownInstances": true,
           "root-provider": {
             "$path": "out/providers/root-provider.luau"
           }
@@ -76,11 +58,19 @@
         "store": {
           "$path": "out/store"
         }
+      },
+      "rbxts_include": {
+        "$path": "include",
+        "node_modules": {
+          "$className": "Folder",
+          "@rbxts": {
+            "$path": "node_modules/@rbxts"
+          }
+        }
       }
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "$ignoreUnknownInstances": true,
       "TS": {
         "$className": "Folder",
         "app": {
@@ -88,19 +78,22 @@
         },
         "features": {
           "$className": "Folder",
-          "$ignoreUnknownInstances": true,
           "inventory": {
             "$path": "out/features/inventory/server"
           }
         }
       }
     },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    },
     "StarterPlayer": {
       "$className": "StarterPlayer",
-      "$ignoreUnknownInstances": true,
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "$ignoreUnknownInstances": true,
         "TS": {
           "$className": "Folder",
           "app": {
@@ -108,7 +101,6 @@
           },
           "features": {
             "$className": "Folder",
-            "$ignoreUnknownInstances": true,
             "inventory": {
               "$path": "out/features/inventory/client"
             }
@@ -116,14 +108,10 @@
         }
       }
     },
-    "ReplicatedFirst": {
-      "$className": "ReplicatedFirst",
-      "$ignoreUnknownInstances": true,
-      "TS": {
-        "$className": "Folder",
-        "app": {
-          "$path": "out/app/replicatedfirst"
-        }
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "FilteringEnabled": true
       }
     }
   }
