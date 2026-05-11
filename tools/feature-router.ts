@@ -5,12 +5,19 @@ import * as path from "path";
  * Adjust these values to change how the Rojo project is structured.
  */
 const SETTINGS = {
-	projectFile: "default.project.json",
-	srcPath: path.join(__dirname, "../src"),
-	outDir: "out",
-	// Name of wrapper folder (e.g. "TS") or 'false' to disable nesting
-	wrapInFolder: "TS" as string | false,
-	// 'true' keeps/adds suffixes (inventory-server); 'false' strips them (inventory)
+	// The name of the file to be generated
+	projectFileName: "default.project.json",
+
+	// The folder containing your source code (relative to the root)
+    sourceDirectory: "src",
+
+	// The folder where compiled code is placed (relative to the root)
+    outputDirectory: "out",
+
+	// Wrap all source in this folder (e.g., "TS") or set to 'false' to disable
+	wrapperFolder: "TS" as string | false,
+
+	// 'true' keeps and adds suffixes (inventory-server); 'false' strips them (inventory)
 	appendSuffix: false,
 };
 
@@ -24,10 +31,10 @@ const SETTINGS = {
  * folder, the generator will overwrite your manual entry.
  *
  * CONFIGURE ROJO_TREE FOR:
- *  1. Services: Workspace, Lighting, HttpService (with properties).
- *  2. Assets: Manual paths to .rbxm models, sounds, or meshes.
+ *  1. Services: Workspace, Lighting, HttpService (with properties)
+ *  2. Assets: Manual paths to .rbxm models, sounds, or meshes
  *  3. Packages: The 'rbxts_include' folder (Packages like React 
- *     require specific node_module mappings).
+ *     require specific node_module mappings)
  */
 const ROJO_TREE = `{
   "name": "roblox-ts-game",
@@ -71,8 +78,6 @@ const ROJO_TREE = `{
   }
 }`;
 
-const rojoTree: RojoProject = JSON.parse(ROJO_TREE);
-
 const serviceMap: Record<string, string> = {
 	Server: "ServerScriptService",
 	Client: "StarterPlayerScripts",
@@ -93,9 +98,10 @@ const serviceParents: Record<string, string> = {
 } as const;
 
 const lowerServiceMap = Object.fromEntries(Object.entries(serviceMap).map(([k, v]) => [k.toLowerCase(), v]));
-
 const separatorRegex = new RegExp(`[\\.\\-_](${Object.keys(lowerServiceMap).join("|")})$`, "i");
 const pascalCaseRegex = new RegExp(`(${Object.keys(serviceMap).join("|")})$`);
+const rojoTree: RojoProject = JSON.parse(ROJO_TREE);
+const sourcePath = path.resolve(process.cwd(), SETTINGS.sourceDirectory);
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
 const isValidScript = (filename: string) =>
@@ -117,7 +123,7 @@ function sortObject(obj: any): any {
 }
 
 function processFilePath(filepath: string, isInit: boolean) {
-	const relativePath = path.relative(SETTINGS.srcPath, filepath);
+	const relativePath = path.relative(sourcePath, filepath);
 	const parts = relativePath.split(path.sep);
 	const filename = parts.pop()!;
 	const basename = path.basename(filename, path.extname(filename));
@@ -167,7 +173,7 @@ function processFilePath(filepath: string, isInit: boolean) {
 
 	if (isInit) {
 		const folderRelativePath = path.dirname(relativePath);
-		projectPath = toPosix(path.join(SETTINGS.outDir, folderRelativePath));
+		projectPath = toPosix(path.join(SETTINGS.outputDirectory, folderRelativePath));
 		if (virtualParts.length > 0) {
 			nodeName = virtualParts.pop()!;
 			if (SETTINGS.appendSuffix && lastRouteKeyword) {
@@ -179,7 +185,7 @@ function processFilePath(filepath: string, isInit: boolean) {
 	} else {
 		const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
 		const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
-		projectPath = toPosix(path.join(SETTINGS.outDir, compiledRelativePath));
+		projectPath = toPosix(path.join(SETTINGS.outputDirectory, compiledRelativePath));
 		if (!SETTINGS.appendSuffix && mappedService) {
 			nodeName = basename.slice(0, -matchedSuffixLength);
 		}
@@ -211,13 +217,13 @@ function walk(dir: string, callback: (filepath: string, isInit: boolean) => void
 	}
 }
 
-if (!fs.existsSync(SETTINGS.srcPath)) {
-	console.error(`Error: src path not found: ${SETTINGS.srcPath}`);
+if (!fs.existsSync(sourcePath)) {
+	console.error(`Error: src path not found: ${sourcePath}`);
 	process.exit(1);
 }
 
 let fileCount = 0;
-walk(SETTINGS.srcPath, (filepath, isInit) => {
+walk(sourcePath, (filepath, isInit) => {
 	fileCount++;
 	const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
 	let current: RojoNode = rojoTree.tree;
@@ -230,8 +236,8 @@ walk(SETTINGS.srcPath, (filepath, isInit) => {
 	current = getOrCreateNode(current, targetService, targetService);
 
 	// Mount to TS folder
-	if (SETTINGS.wrapInFolder) {
-		current = getOrCreateNode(current, SETTINGS.wrapInFolder, "Folder");
+	if (SETTINGS.wrapperFolder) {
+		current = getOrCreateNode(current, SETTINGS.wrapperFolder, "Folder");
 	}
 
 	// Build virtual folders
@@ -243,11 +249,11 @@ walk(SETTINGS.srcPath, (filepath, isInit) => {
 });
 
 const sortedTree = sortObject(rojoTree);
-fs.writeFileSync(SETTINGS.projectFile, JSON.stringify(sortedTree, null, 2));
+fs.writeFileSync(SETTINGS.projectFileName, JSON.stringify(sortedTree, null, 2));
 
 console.log(`\nRojo project ${rojoTree.name} generated successfully!`);
 console.log(`Processed ${fileCount} source files.`);
-console.log(`Output: ${SETTINGS.projectFile}\n`);
+console.log(`Output: ${SETTINGS.projectFileName}\n`);
 
 interface RojoNode {
 	$className?: string;
