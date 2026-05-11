@@ -7,10 +7,7 @@
   "tree": {
     "$className": "DataModel",
     "HttpService": {
-      "$className": "HttpService",
-      "$properties": {
-        "HttpEnabled": true
-      }
+      "$className": "HttpService"
     },
     "ReplicatedFirst": {
       "$className": "ReplicatedFirst",
@@ -73,9 +70,6 @@
       "$className": "ServerScriptService",
       "TS": {
         "$className": "Folder",
-        "app": {
-          "$path": "out/app/server"
-        },
         "features": {
           "$className": "Folder",
           "inventory": {
@@ -109,10 +103,7 @@
       }
     },
     "Workspace": {
-      "$className": "Workspace",
-      "$properties": {
-        "FilteringEnabled": true
-      }
+      "$className": "Workspace"
     }
   }
 }
