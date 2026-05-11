@@ -2,26 +2,16 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * These variables control build behavior.
+ * Adjust these values to change how the Rojo project is structured.
  */
 const SETTINGS = {
 	projectFile: "default.project.json",
 	srcPath: path.join(__dirname, "../src"),
 	outDir: "out",
-
-	// see Rojo project format docs
-	emitLegacyScripts: true as boolean,
-
 	// Name of wrapper folder (e.g. "TS") or 'false' to disable nesting
 	wrapInFolder: "TS" as string | false,
-
 	// 'true' keeps/adds suffixes (inventory-server); 'false' strips them (inventory)
 	appendSuffix: false,
-
-	// add your modules here
-	nodeModules: {
-		"@rbxts": "node_modules/@rbxts", // base module, do not remove
-	},
 };
 
 /**
@@ -30,20 +20,16 @@ const SETTINGS = {
  * code from 'src' into the tree.
  *
  * WARNING:
- * If you manually define a script path here that also exists in your 'src'
+ * If you manually define a script path here that also exists in the 'src'
  * folder, the generator will overwrite your manual entry.
  *
- * USE THIS SECTION FOR:
+ * CONFIGURE ROJO_TREE FOR:
  *  1. Services: Workspace, Lighting, HttpService (with properties).
  *  2. Assets: Manual paths to .rbxm models, sounds, or meshes.
+ *  3. Packages: The 'rbxts_include' folder (Packages like React 
+ *     require specific node_module mappings).
  */
-
-const nodeModulesInline = Object.entries(SETTINGS.nodeModules)
-	.map(([module, path]) => `"${module}": { "$path": "${path}" }`)
-	.join(",\n");
-
-const CONFIG_PROJECT_JSON = `{
-  "emitLegacyScripts": ${SETTINGS.emitLegacyScripts},
+const ROJO_TREE = `{
   "name": "roblox-ts-game",
   "globIgnorePaths": [
     "**/package.json",
@@ -58,9 +44,9 @@ const CONFIG_PROJECT_JSON = `{
       "$className": "ReplicatedStorage",
       "rbxts_include": {
         "$path": "include",
-        "node_modules": {
-          "$className": "Folder",
-          ${nodeModulesInline}
+        "node_modules": { 
+          "$className": "Folder", 
+          "@rbxts": { "$path": "node_modules/@rbxts" } 
         }
       }
     },
@@ -85,7 +71,7 @@ const CONFIG_PROJECT_JSON = `{
   }
 }`;
 
-const projectTree: RojoProject = JSON.parse(CONFIG_PROJECT_JSON);
+const rojoTree: RojoProject = JSON.parse(ROJO_TREE);
 
 const serviceMap: Record<string, string> = {
 	Server: "ServerScriptService",
@@ -168,7 +154,8 @@ function processFilePath(filepath: string, isInit: boolean) {
 	if (mappedService && !lastRouteKeyword) {
 		// Scripts with non-legacy run context run incorrectly in StarterPlayer container.
 		// Instead, always put them in ReplicatedStorage
-		if (SETTINGS.emitLegacyScripts == false && mappedService == "StarterPlayerScripts") {
+        const emitLegacyScripts = rojoTree.emitLegacyScripts ?? true;
+		if (emitLegacyScripts == false && mappedService == "StarterPlayerScripts") {
 			targetService = "ReplicatedStorage";
 		} else {
 			targetService = mappedService;
@@ -233,7 +220,7 @@ let fileCount = 0;
 walk(SETTINGS.srcPath, (filepath, isInit) => {
 	fileCount++;
 	const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
-	let current: RojoNode = projectTree.tree;
+	let current: RojoNode = rojoTree.tree;
 
 	// Mount to Service
 	const parentService = serviceParents[targetService];
@@ -255,10 +242,10 @@ walk(SETTINGS.srcPath, (filepath, isInit) => {
 	current[nodeName] = { $path: projectPath };
 });
 
-const sortedTree = sortObject(projectTree);
+const sortedTree = sortObject(rojoTree);
 fs.writeFileSync(SETTINGS.projectFile, JSON.stringify(sortedTree, null, 2));
 
-console.log(`\nRojo project ${projectTree.name} generated successfully!`);
+console.log(`\nRojo project ${rojoTree.name} generated successfully!`);
 console.log(`Processed ${fileCount} source files.`);
 console.log(`Output: ${SETTINGS.projectFile}\n`);
 
