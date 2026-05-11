@@ -62,14 +62,21 @@ Also, you will need a few development tools to handle the watching, routing and 
 npm install -D tsx chokidar-cli concurrently
 ```
 
-### 2. Update package.json Scripts
+### 2. Update JSON Scripts
 Add the following scripts to your package.json to automate the build process:
-```bash
+```json
 "scripts": {
     "build": "tsx tools/feature-router.ts && rbxtsc",
     "watch": "concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\"",
     "dev": "npm run build && concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\" \"rojo serve\""
 }
+```
+
+And make sure to add the following to your tsconfig.json:
+```json
+"exclude": [
+	"tools"
+]
 ```
 
 ### 3. Commands
