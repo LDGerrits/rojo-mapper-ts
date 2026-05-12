@@ -1,5 +1,5 @@
 <div align="center">
-	<h1>rbxts-feature-router</h1>
+	<h1>rojo-feature-router</h1>
     <p>An automatic, file-system based router for roblox-ts and luau. Organize feature logic in a single directory.</p>
 </div>
 
@@ -25,7 +25,7 @@ If a file is in a generic folder, the router inspects the filename for a suffix.
 * **PascalCase Suffixes:** Append the service name directly to the end of the filename.
     - Examples: `AuthServer.ts`, `InputClient.ts`, `DataShared.ts`
 
-    **Note:** The router strips the suffix for the final Rojo object name. `AuthServer.ts` becomes `Auth` in Roblox. This can be stopped by doing `APPEND_ROUTE_SUFFIX = true` instead.
+    **Note:** The router strips the suffix for the final Rojo object name. `AuthServer.ts` becomes `Auth` in Roblox. This can be stopped by setting `appendSuffix = true` instead.
 
 ### 3. Default
 If neither matches, the file defaults to `ReplicatedStorage`.
@@ -55,7 +55,7 @@ src/
 Integrate the router into your workflow to ensure your `default.project.json` stays synchronized with your file system.
 
 ### 1. Install Dependencies
-Copy the `feature-router.ts` script into your project (e.g. in the `tools/` directory). Then, modify the settings and rojo tree at the top of the script to your need.
+Copy the `feature-router.js` script into your project (e.g. in the `tools/` directory). Then, modify the settings and rojo tree at the top of the script to your need.
 
 Also, you will need a few development tools to handle the watching, routing and concurrent execution for the commands:
 ```bash
@@ -94,6 +94,6 @@ Make sure to add the following to your tsconfig.json:
 ```
 
 ### 3. Commands
-* **npm run build:** Generates the latest project map and performs a single roblox-ts compilation.  
-* **npm run watch:** Monitors your src directory. If you add or move a folder, the mapper instantly updates your Rojo project while rbxtsc handles the code compilation.  
+* **npm run build:** Generates the latest project map (and performs a single roblox-ts compilation).  
+* **npm run watch:** Monitors your src directory. If you add or move a folder, the mapper instantly updates your Rojo project (and code compilation).  
 * **npm run dev:** The dev command. It builds, compiles, starts all watchers, and launches the Rojo server all in one go.
