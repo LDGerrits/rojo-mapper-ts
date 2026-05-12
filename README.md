@@ -1,6 +1,7 @@
 <div align="center">
 	<h1>rojo-feature-router</h1>
     <p>An automatic, file-system based router for roblox-ts and luau. Organize feature logic in a single directory.</p>
+    <img src="example.png" alt="Visual mapping of VS Code to Roblox Explorer" width="100%">
 </div>
 
 ## Why use it?
@@ -30,36 +31,15 @@ If a file is in a generic folder, the router inspects the filename for a suffix.
 ### 3. Default
 If neither matches, the file defaults to `ReplicatedStorage`.
 
-## Example Structure
-```txt
-src/
-├── app/
-│   ├── client/
-│   │   ├── index.client.ts     -> Mounts to StarterPlayer/StarterPlayerScripts/TS/app/init.client.luau
-│   │   └── app.tsx             -> Handled natively by Rojo inside the app module
-│   ├── replicatedfirst/
-│   │   ├── index.client.ts     -> Mounts to ReplicatedFirst/TS/app/init.client.luau
-│   │   └── loader.ts			-> Handled natively by Rojo inside the app module
-├── features/
-│   ├── inventory/
-│   │   ├── client/
-│   │   │   ├── index.ts        -> Mounts to StarterPlayerScripts/TS/features/inventory/init.luau
-│   │   │   └── ui.tsx          -> Handled natively by Rojo inside the inventory module
-│   │   ├── server/
-│   │   │   └── index.ts        -> Mounts to ServerScriptService/TS/features/inventory/init.luau
-│   │   └── shared/
-│   │       └── config.ts       -> Mounts to ReplicatedStorage/TS/features/inventory/config.luau
-```
-
 ## Setup & Integration
-Integrate the router into your workflow to ensure your `default.project.json` stays synchronized with your file system.
+Integrate the router into your workflow to ensure that your `default.project.json` stays synchronized with your file system.
 
 ### 1. Install Dependencies
 Copy the `feature-router.js` script into your project (e.g. in the `tools/` directory). Then, modify the settings and rojo tree at the top of the script to your need.
 
 Also, you will need a few development tools to handle the watching, routing and concurrent execution for the commands:
 ```bash
-npm install -D tsx chokidar-cli concurrently
+npm install -D chokidar-cli concurrently
 ```
 
 ### 2. Update JSON Scripts
