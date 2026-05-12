@@ -1,8 +1,17 @@
-import * as fs from "fs";
-import * as path from "path";
+const fs = require("fs");
+const path = require("path");
+
+const isTsProject = fs.existsSync(path.join(process.cwd(), "tsconfig.json"));
 
 /**
- * Adjust these values to change how the Rojo project is structured.
+ * SETTINGS
+ * 
+ * These settings dictate the structure of your Rojo project. 
+ * Defaults are dynamically toggled based on whether a 'tsconfig.json' is detected.
+ * 
+ * OVERRIDES:
+ * - If your TS project compiles to a folder other than 'out', change outputDirectory.
+ * - If you want your Luau code wrapped in a specific folder, set wrapperFolder.
  */
 const SETTINGS = {
 	// The name of the file to be generated
@@ -11,33 +20,37 @@ const SETTINGS = {
 	// The folder containing your source code (relative to the root)
     sourceDirectory: "src",
 
-	// The folder where compiled code is placed (relative to the root)
-    outputDirectory: "out",
+	// TS compiles to 'out', while Luau generally references 'src' directly (relative to the root)
+    outputDirectory: isTsProject ? "out" : "src",
 
-	// Wrap all source in this folder (e.g., "TS") or set to 'false' to disable
-	wrapperFolder: "TS" as string | false,
+	// TS typically wraps scripts in a 'TS' folder; Luau devs usually don't
+	wrapperFolder: isTsProject ? "TS" : false,
 
-	// 'true' keeps and adds suffixes (inventory-server); 'false' strips them (inventory)
+	// 'true' keeps and adds suffixes (e.g. inventory-server); 'false' strips them (e.g. inventory)
 	appendSuffix: false,
 };
 
 /**
- * This template uses the exact JSON format of a standard Rojo 'default.project.json'.
- * The script parses this base structure and dynamically injects your source
- * code from 'src' into the tree.
+ * ROJO PROJECT TEMPLATE
+ * 
+ * Compatible with roblox-ts and Luau (Wally).
+ * The script dynamically injects paths into this tree and then 
+ * prunes any nodes whose $path does not exist on your disk.
+ * See Rojo Project Format for more details (https://rojo.space/docs/v7/)
  *
- * WARNING:
- * If you manually define a script path here that also exists in the 'src'
- * folder, the generator will overwrite your manual entry.
- *
- * CONFIGURE ROJO_TREE FOR:
- *  1. Services: Workspace, Lighting, HttpService (with properties)
- *  2. Assets: Manual paths to .rbxm models, sounds, or meshes
- *  3. Packages: The 'rbxts_include' folder (Packages like React 
- *     require specific node_module mappings)
+ * CONFIGURATION GUIDE:
+ *  1. Services: Add services (Workspace, Lighting, etc.) here to set specific properties.
+ *  2. Assets: Manually define paths to .rbxm models, sounds, or meshes.
+ *  3. Packages: Includes default paths for node_modules and Wally.
+ *     - Unused package folders are automatically pruned.
+ *     - TS users: Some packages like React require specific node_module mappings to get them to work
+ * 
+ * NOTE:
+ * Entries defined here take priority. If a file in 'src' maps to a node name already manually 
+ * defined here, the script will merge the two (adding the $path to the existing node).
  */
 const ROJO_TREE = `{
-  "name": "roblox-ts-game",
+  "name": "roblox-project",
   "globIgnorePaths": [
     "**/package.json",
     "**/tsconfig.json"
@@ -45,40 +58,28 @@ const ROJO_TREE = `{
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": {
-      "$className": "ServerScriptService"
+	  "ServerPackages": {
+        "$path": "ServerPackages"
+      }
     },
     "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
       "rbxts_include": {
         "$path": "include",
         "node_modules": { 
           "$className": "Folder", 
-          "@rbxts": { "$path": "node_modules/@rbxts" } 
+          "@rbxts": { 
+            "$path": "node_modules/@rbxts" 
+          } 
         }
-      }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts"
-      }
-    },
-    "Workspace": {
-      "$className": "Workspace"
-    },
-    "HttpService": {
-      "$className": "HttpService"
-    },
-    "SoundService": {
-      "$className": "SoundService",
-      "$properties": {
-        "RespectFilteringEnabled": true
+      },
+      "Packages": {
+        "$path": "Packages"
       }
     }
   }
 }`;
 
-const serviceMap: Record<string, string> = {
+const serviceMap = {
 	Server: "ServerScriptService",
 	Client: "StarterPlayerScripts",
 	Shared: "ReplicatedStorage",
@@ -90,47 +91,68 @@ const serviceMap: Record<string, string> = {
 	StarterPack: "StarterPack",
 	StarterPlayerScripts: "StarterPlayerScripts",
 	StarterCharacterScripts: "StarterCharacterScripts",
-} as const;
+};
 
-const serviceParents: Record<string, string> = {
+const serviceParents = {
 	StarterPlayerScripts: "StarterPlayer",
 	StarterCharacterScripts: "StarterPlayer",
-} as const;
+};
 
 const lowerServiceMap = Object.fromEntries(Object.entries(serviceMap).map(([k, v]) => [k.toLowerCase(), v]));
 const separatorRegex = new RegExp(`[\\.\\-_](${Object.keys(lowerServiceMap).join("|")})$`, "i");
 const pascalCaseRegex = new RegExp(`(${Object.keys(serviceMap).join("|")})$`);
-const rojoTree: RojoProject = JSON.parse(ROJO_TREE);
+const rojoTree = JSON.parse(ROJO_TREE);
 const sourcePath = path.resolve(process.cwd(), SETTINGS.sourceDirectory);
 
-const toPosix = (p: string) => p.split(path.sep).join("/");
-const isValidScript = (filename: string) =>
+const toPosix = (p) => p.split(path.sep).join("/");
+const isValidScript = (filename) =>
 	/\.(tsx?|luau|lua)$/i.test(filename) && !filename.toLowerCase().endsWith(".d.ts");
-const isInitFile = (filename: string) => isValidScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
+const isInitFile = (filename) => isValidScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
 
-function getOrCreateNode(parent: RojoNode, key: string, className: string): RojoNode {
-	return (parent[key] ??= { $className: className }) as RojoNode;
+function getOrCreateNode(parent, key, className) {
+	if (!parent[key]) {
+        parent[key] = className == null ? {} : { "$className": className };
+    }
+    return parent[key];
 }
 
-function sortObject(obj: any): any {
+function pruneObject(node) {
+    Object.keys(node).forEach(key => {
+        const value = node[key];
+        if (typeof value === 'object' && value !== null) {
+            if (value['$path']) {
+                const fullPath = path.resolve(process.cwd(), value['$path']);
+                if (!fs.existsSync(fullPath)) {
+                    delete node[key];
+					console.log(`pruned: ${fullPath}\n`);
+                    return;
+                }
+            }
+            pruneObject(value);
+        }
+    });
+    return node;
+}
+
+function sortObject(obj) {
 	if (obj === null || typeof obj !== "object" || Array.isArray(obj)) return obj;
 	return Object.keys(obj)
 		.sort()
-		.reduce((acc: any, key) => {
+		.reduce((acc, key) => {
 			acc[key] = sortObject(obj[key]);
 			return acc;
 		}, {});
 }
 
-function processFilePath(filepath: string, isInit: boolean) {
+function processFilePath(filepath, isInit) {
 	const relativePath = path.relative(sourcePath, filepath);
 	const parts = relativePath.split(path.sep);
-	const filename = parts.pop()!;
+	const filename = parts.pop();
 	const basename = path.basename(filename, path.extname(filename));
 
 	let targetService = "ReplicatedStorage";
-	const virtualParts: string[] = [];
-	let lastRouteKeyword: string | null = null;
+	const virtualParts = [];
+	let lastRouteKeyword = null;
 
 	// Folder routing
 	for (const part of parts) {
@@ -144,7 +166,7 @@ function processFilePath(filepath: string, isInit: boolean) {
 	}
 
 	let matchedSuffixLength = 0;
-	let mappedService: string | null = null;
+	let mappedService = null;
 
 	const sepMatch = basename.match(separatorRegex);
 	const pascalMatch = basename.match(pascalCaseRegex);
@@ -165,6 +187,7 @@ function processFilePath(filepath: string, isInit: boolean) {
 			targetService = "ReplicatedStorage";
 		} else {
 			targetService = mappedService;
+			console.log(`suffix matched to: ${targetService}\n`);
 		}
 	}
 
@@ -175,7 +198,7 @@ function processFilePath(filepath: string, isInit: boolean) {
 		const folderRelativePath = path.dirname(relativePath);
 		projectPath = toPosix(path.join(SETTINGS.outputDirectory, folderRelativePath));
 		if (virtualParts.length > 0) {
-			nodeName = virtualParts.pop()!;
+			nodeName = virtualParts.pop();
 			if (SETTINGS.appendSuffix && lastRouteKeyword) {
 				nodeName += `-${lastRouteKeyword}`;
 			}
@@ -183,18 +206,25 @@ function processFilePath(filepath: string, isInit: boolean) {
 			nodeName = lastRouteKeyword ? lastRouteKeyword : "source";
 		}
 	} else {
-		const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
-		const compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
-		projectPath = toPosix(path.join(SETTINGS.outputDirectory, compiledRelativePath));
-		if (!SETTINGS.appendSuffix && mappedService) {
-			nodeName = basename.slice(0, -matchedSuffixLength);
-		}
+		let compiledRelativePath = relativePath;
+        
+        // Roblox-ts projects need to swap .ts/.tsx extensions to .luau
+        if (isTsProject) {
+            const compiledFilename = filename.replace(/\.tsx?$/i, ".luau");
+            compiledRelativePath = path.join(path.dirname(relativePath), compiledFilename);
+        }
+        
+        projectPath = toPosix(path.join(SETTINGS.outputDirectory, compiledRelativePath));
+        
+        if (!SETTINGS.appendSuffix && mappedService) {
+            nodeName = basename.slice(0, -matchedSuffixLength);
+        }
 	}
 
 	return { targetService, virtualParts, nodeName, projectPath };
 }
 
-function walk(dir: string, callback: (filepath: string, isInit: boolean) => void) {
+function walk(dir, callback) {
 	if (!fs.existsSync(dir)) return;
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
 	const files = entries.filter((e) => e.isFile());
@@ -203,6 +233,8 @@ function walk(dir: string, callback: (filepath: string, isInit: boolean) => void
 	const initFile = files.find((e) => isInitFile(e.name));
 	if (initFile) {
 		callback(path.join(dir, initFile.name), true);
+		// Rojo automatically syncs the entire directory when mapped to an init file.
+        // Return early so we don't create duplicate explicit entries for children.
 		return;
 	}
 
@@ -226,16 +258,16 @@ let fileCount = 0;
 walk(sourcePath, (filepath, isInit) => {
 	fileCount++;
 	const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
-	let current: RojoNode = rojoTree.tree;
+	let current = rojoTree.tree;
 
 	// Mount to Service
 	const parentService = serviceParents[targetService];
 	if (parentService) {
-		current = getOrCreateNode(current, parentService, parentService);
+		current = getOrCreateNode(current, parentService);
 	}
-	current = getOrCreateNode(current, targetService, targetService);
+	current = getOrCreateNode(current, targetService);
 
-	// Mount to TS folder
+	// Mount to wrapper folder
 	if (SETTINGS.wrapperFolder) {
 		current = getOrCreateNode(current, SETTINGS.wrapperFolder, "Folder");
 	}
@@ -245,32 +277,27 @@ walk(sourcePath, (filepath, isInit) => {
 		current = getOrCreateNode(current, part, "Folder");
 	}
 
-	current[nodeName] = { $path: projectPath };
+	// Merge path
+	current[nodeName] = current[nodeName] || {};
+    current[nodeName]["$path"] = projectPath;
+	if (current[nodeName]["$className"] === "Folder") {
+        delete current[nodeName]["$className"];
+    }
 });
 
-const sortedTree = sortObject(rojoTree);
-fs.writeFileSync(SETTINGS.projectFileName, JSON.stringify(sortedTree, null, 2));
+const prunedTree = pruneObject(rojoTree);
+const sortedTree = sortObject(prunedTree);
+const newContent = JSON.stringify(sortedTree, null, 2);
+
+if (fs.existsSync(SETTINGS.projectFileName)) {
+    const existingContent = fs.readFileSync(SETTINGS.projectFileName, "utf-8");
+    if (existingContent === newContent) {
+        return;
+    }
+}
+
+fs.writeFileSync(SETTINGS.projectFileName, newContent);
 
 console.log(`\nRojo project ${rojoTree.name} generated successfully!`);
 console.log(`Processed ${fileCount} source files.`);
 console.log(`Output: ${SETTINGS.projectFileName}\n`);
-
-interface RojoNode {
-	$className?: string;
-	$path?: string;
-	$ignoreUnknownInstances?: boolean;
-	$properties?: Record<string, unknown>;
-	[key: string]: any;
-}
-
-interface RojoProject {
-	name: string;
-	servePort?: number;
-	servePlaceIds?: number[];
-	placeId?: number;
-	gameId?: number;
-	serveAddress?: string;
-	globIgnorePaths?: string[];
-	emitLegacyScripts?: boolean;
-	tree: RojoNode;
-}

@@ -1,0 +1,10 @@
+# Project place file
+/feature-router.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+sourcemap.json
+node_modules
+package-lock.json

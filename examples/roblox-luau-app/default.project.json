@@ -1,0 +1,77 @@
+{
+  "globIgnorePaths": [
+    "**/package.json",
+    "**/tsconfig.json"
+  ],
+  "name": "roblox-project",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedFirst": {
+      "app": {
+        "$path": "src/app/replicatedfirst"
+      }
+    },
+    "ReplicatedStorage": {
+      "components": {
+        "$className": "Folder",
+        "Button": {
+          "$path": "src/components/Button"
+        },
+        "Header": {
+          "$path": "src/components/Header"
+        }
+      },
+      "config": {
+        "$className": "Folder",
+        "fonts": {
+          "$path": "src/config/fonts.luau"
+        }
+      },
+      "features": {
+        "$className": "Folder",
+        "inventory": {
+          "$path": "src/features/inventory/shared"
+        }
+      },
+      "hooks": {
+        "$className": "Folder",
+        "usePx": {
+          "$path": "src/hooks/usePx.luau"
+        }
+      },
+      "store": {
+        "$className": "Folder",
+        "world": {
+          "$path": "src/store/world"
+        }
+      },
+      "types": {
+        "$className": "Folder",
+        "global": {
+          "$path": "src/types/global.luau"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "features": {
+        "$className": "Folder",
+        "inventory": {
+          "$path": "src/features/inventory/server"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "app": {
+          "$path": "src/app/client"
+        },
+        "features": {
+          "$className": "Folder",
+          "inventory": {
+            "$path": "src/features/inventory/client"
+          }
+        }
+      }
+    }
+  }
+}

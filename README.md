@@ -1,6 +1,6 @@
 <div align="center">
 	<h1>rbxts-feature-router</h1>
-    <p>An automatic, file-system based router for roblox-ts. Organize feature logic in a single directory.</p>
+    <p>An automatic, file-system based router for roblox-ts and luau. Organize feature logic in a single directory.</p>
 </div>
 
 ## Why use it?
@@ -64,15 +64,29 @@ npm install -D tsx chokidar-cli concurrently
 
 ### 2. Update JSON Scripts
 Add the following scripts to your package.json to automate the build process:
+
+#### luau
 ```json
 "scripts": {
-    "build": "tsx tools/feature-router.ts && rbxtsc",
-    "watch": "concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\"",
-    "dev": "npm run build && concurrently \"chokidar src -c \\\"tsx tools/feature-router.ts\\\"\" \"rbxtsc -w\" \"rojo serve\""
-}
+    "router": "node tools/feature-router.js",
+    "build": "npm run router",
+    "watch": "chokidar \"src/**/*\" -c \"npm run router\"",
+    "sourcemap": "rojo sourcemap --watch default.project.json --output sourcemap.json",
+    "dev": "npm run build && concurrently \"npm run watch\" \"rojo serve\" \"npm run sourcemap\""
+},
 ```
 
-And make sure to add the following to your tsconfig.json:
+#### roblox-ts
+```json
+"scripts": {
+    "router": "node tools/feature-router.js",
+    "build": "npm run router && rbxtsc",
+    "watch": "concurrently \"chokidar \"src/**/*\" -c \\\"npm run router\\\"\" \"rbxtsc -w\"",
+    "dev": "npm run build && concurrently \"chokidar \"src/**/*\" -c \\\"npm run router\\\"\" \"rbxtsc -w\" \"rojo serve\""
+},
+```
+
+Make sure to add the following to your tsconfig.json:
 ```json
 "exclude": [
 	"tools"
