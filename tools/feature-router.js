@@ -31,7 +31,7 @@ const SETTINGS = {
 };
 
 /**
- * ROJO PROJECT TEMPLATE
+ * ROJO PROJECT TREE
  * 
  * Compatible with roblox-ts and Luau (Wally).
  * The script dynamically injects paths into this tree and then 
@@ -117,20 +117,18 @@ function getOrCreateNode(parent, key, className) {
 }
 
 function pruneObject(node) {
-    Object.keys(node).forEach(key => {
-        const value = node[key];
-        if (typeof value === 'object' && value !== null) {
-            if (value['$path']) {
-                const fullPath = path.resolve(process.cwd(), value['$path']);
-                if (!fs.existsSync(fullPath)) {
-                    delete node[key];
-					console.log(`pruned: ${fullPath}\n`);
-                    return;
-                }
+    for (const key in node) {
+        const val = node[key];
+        if (typeof val !== "object" || val === null) continue;
+
+        if (val.$path) {
+            if (!fs.existsSync(path.resolve(process.cwd(), val.$path))) {
+                delete node[key];
+                continue;
             }
-            pruneObject(value);
         }
-    });
+        pruneObject(val);
+    }
     return node;
 }
 
@@ -187,7 +185,6 @@ function processFilePath(filepath, isInit) {
 			targetService = "ReplicatedStorage";
 		} else {
 			targetService = mappedService;
-			console.log(`suffix matched to: ${targetService}\n`);
 		}
 	}
 
@@ -227,10 +224,8 @@ function processFilePath(filepath, isInit) {
 function walk(dir, callback) {
 	if (!fs.existsSync(dir)) return;
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
-	const files = entries.filter((e) => e.isFile());
-	const folders = entries.filter((e) => e.isDirectory());
 
-	const initFile = files.find((e) => isInitFile(e.name));
+	const initFile = entries.find((e) => e.isFile() && isInitFile(e.name));
 	if (initFile) {
 		callback(path.join(dir, initFile.name), true);
 		// Rojo automatically syncs the entire directory when mapped to an init file.
@@ -238,15 +233,14 @@ function walk(dir, callback) {
 		return;
 	}
 
-	for (const file of files) {
-		if (!initFile && isValidScript(file.name)) {
-			callback(path.join(dir, file.name), false);
+	for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+			walk(fullPath, callback);
+		} else if (isValidScript(entry.name)) {
+			callback(fullPath, false);
 		}
-	}
-
-	for (const folder of folders) {
-		walk(path.join(dir, folder.name), callback);
-	}
+    }
 }
 
 if (!fs.existsSync(sourcePath)) {
@@ -258,6 +252,7 @@ let fileCount = 0;
 walk(sourcePath, (filepath, isInit) => {
 	fileCount++;
 	const { targetService, virtualParts, nodeName, projectPath } = processFilePath(filepath, isInit);
+	
 	let current = rojoTree.tree;
 
 	// Mount to Service
@@ -278,8 +273,7 @@ walk(sourcePath, (filepath, isInit) => {
 	}
 
 	// Merge path
-	current[nodeName] = current[nodeName] || {};
-    current[nodeName]["$path"] = projectPath;
+	current[nodeName] = { ...current[nodeName], $path: projectPath };
 	if (current[nodeName]["$className"] === "Folder") {
         delete current[nodeName]["$className"];
     }
