@@ -107,6 +107,10 @@ function pruneObject(node) {
 		if (typeof val !== "object" || val === null) continue;
 
 		if (val.$path) {
+			if (val.$path.startsWith(TS_PRESETS.outputDirectory) || val.$path.startsWith(LUAU_PRESETS.outputDirectory)) {
+                continue; 
+            }
+			
 			if (!fs.existsSync(path.resolve(process.cwd(), val.$path))) {
 				delete node[key];
 				continue;
