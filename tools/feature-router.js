@@ -97,9 +97,10 @@ const separatorRegex = new RegExp(`[\\.\\-_](${Object.keys(lowerServiceMap).join
 const pascalCaseRegex = new RegExp(`(${Object.keys(serviceMap).join("|")})$`);
 
 const toPosix = (p) => p.split(path.sep).join("/");
-const isValidScript = (filename) =>
-	/\.(tsx?|luau|lua)$/i.test(filename) && !filename.toLowerCase().endsWith(".d.ts");
-const isInitFile = (filename) => isValidScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
+const isScript = (filename) => /\.(tsx?|luau|lua)$/i.test(filename) && !filename.toLowerCase().endsWith(".d.ts");
+const isModel = (filename) => /\.(rbxm|rbxmx)$/i.test(filename);
+const isValidSource = (filename) => isScript(filename) || isModel(filename);
+const isInitFile = (filename) => isScript(filename) && /^(index|init)([\.-][a-z0-9_]+)?\./i.test(filename);
 
 function pruneObject(node) {
 	for (const key in node) {
@@ -108,8 +109,8 @@ function pruneObject(node) {
 
 		if (val.$path) {
 			if (val.$path.startsWith(TS_PRESETS.outputDirectory) || val.$path.startsWith(LUAU_PRESETS.outputDirectory)) {
-                continue; 
-            }
+				continue; 
+			}
 			
 			if (!fs.existsSync(path.resolve(process.cwd(), val.$path))) {
 				delete node[key];
@@ -232,7 +233,7 @@ function walk(dir, callback) {
 		const fullPath = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
 			walk(fullPath, callback);
-		} else if (isValidScript(entry.name)) {
+		} else if (isValidSource(entry.name)) {
 			callback(fullPath, false);
 		}
 	}
